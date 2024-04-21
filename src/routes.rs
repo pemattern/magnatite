@@ -1,12 +1,16 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Form,
 };
 
-use crate::database::{Database, Key, Record};
+use crate::database::{ColumnValue, Database, Key, Record};
 
 pub async fn get_record(
     Path((table_key, record_key)): Path<(String, String)>,
@@ -24,8 +28,9 @@ pub async fn get_record(
 }
 
 pub async fn insert_record(
-    Path((table_key, record_key, value)): Path<(String, String, String)>,
+    Path((table_key, record_key)): Path<(String, String)>,
     state: State<Arc<Mutex<Database>>>,
+    Form(record_data): Form<HashMap<String, String>>,
 ) -> Response {
     let table_key = Key::String(table_key);
     let record_key = Key::String(record_key);
@@ -34,10 +39,7 @@ pub async fn insert_record(
     let mut guard = mutex.lock().unwrap();
 
     let mut record = Record::new();
-    record.set_column_value(
-        Key::String("test_column".to_string()),
-        crate::database::ColumnValue::String(value),
-    );
+    record.set_data(record_data);
 
     guard.set(table_key, record_key, record);
     (StatusCode::CREATED).into_response()

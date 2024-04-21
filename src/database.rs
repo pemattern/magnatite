@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::errors::BadKeyError;
@@ -76,7 +77,7 @@ impl Table {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Record {
     columns: HashMap<Key, ColumnValue>,
 }
@@ -85,6 +86,13 @@ impl Record {
     pub fn new() -> Self {
         Self {
             columns: HashMap::new(),
+        }
+    }
+
+    pub fn set_data(&mut self, data: HashMap<String, String>) {
+        for column in data {
+            self.columns
+                .insert(Key::String(column.0), ColumnValue::String(column.1));
         }
     }
 
@@ -98,14 +106,14 @@ impl Record {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ColumnValue {
     ForeignKey(String),
     String(String),
     Integer(i64),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Key {
     Integer(i64),
     String(String),
