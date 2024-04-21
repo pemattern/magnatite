@@ -1,1 +1,1 @@
-# Magnatite
+# MAGNATITE
