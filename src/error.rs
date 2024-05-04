@@ -1,8 +1,11 @@
 use std::fmt::{Display, Formatter};
+
+use sqlparser::parser::ParserError;
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
+    BadSql { error: ParserError },
     BadTableKey { key: String },
     BadRecordKey { key: String, table_key: String },
     BadColumnKey { key: String, table_key: String },
@@ -17,6 +20,7 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
+            Error::BadSql { error } => write!(f, "{}", error),
             Error::BadTableKey { key } => write!(f, "table with key `{}` not found", key),
             Error::BadRecordKey { key, table_key } => write!(
                 f,

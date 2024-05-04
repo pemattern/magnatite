@@ -1,12 +1,13 @@
 pub mod database;
 pub mod error;
+pub mod interpreter;
 pub mod routes;
 
 use std::sync::{Arc, Mutex};
 
 use axum::{routing::post, Router};
 use database::database::Database;
-use routes::parse_sql;
+use routes::sql;
 use tokio::net::TcpListener;
 
 pub type AppState = Arc<Mutex<Database>>;
@@ -21,7 +22,7 @@ async fn main() {
 fn app() -> Router {
     let state: AppState = Arc::new(Mutex::new(Database::new()));
     Router::new()
-        .route("/sql_query", post(parse_sql))
+        .route("/sql_query", post(sql))
         .with_state(state)
 }
 

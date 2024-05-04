@@ -1,38 +1,39 @@
-use std::collections::HashMap;
+use std::{cell::Cell, collections::HashMap};
 
 use crate::error::{Error, Result};
 
 use super::{
     cell::CellValue,
-    column::{Column, ColumnConstraint, ColumnType},
+    column::{Column, ColumnConstraint},
     record::Record,
 };
 
 #[derive(Debug)]
 pub struct Table {
-    key: String,
-    records: HashMap<String, Record>,
-    columns: HashMap<String, Column>,
+    pub key: String,
+    records: Vec<Record>,
+    columns: Vec<Column>,
 }
 
 impl Table {
-    pub fn new(key: String, columns: HashMap<String, Column>) -> Self {
+    pub fn new(key: String, columns: Option<Vec<Column>>) -> Self {
+        println!("Created table {}", &key);
         Self {
             key,
-            records: HashMap::new(),
-            columns,
+            records: Vec::new(),
+            columns: columns.unwrap_or_else(Vec::new),
         }
     }
 
     pub fn add_column(
         &mut self,
         key: String,
-        r#type: ColumnType,
+        r#type: CellValue,
         constraints: ColumnConstraint,
-    ) -> Result<()> {
-        if self.columns.contains_key(&key) {
+    ) -> Result<&Column> {
+        if self.columns.iter().any(|c| c.key == key) {
             return Err(Error::ColumnAlreadyExists {
-                key,
+                key: key.clone(),
                 table_key: self.key.clone(),
             });
         }
@@ -41,48 +42,39 @@ impl Table {
             && self
                 .columns
                 .iter()
-                .any(|c| c.1.constraints.contains(ColumnConstraint::PrimaryKey))
+                .any(|c| c.constraints.contains(ColumnConstraint::PrimaryKey))
         {
             return Err(Error::PrimaryColumnAlreadyExists {
-                key,
+                key: key.clone(),
                 table_key: self.key.clone(),
             });
         }
 
-        let column = Column::new(key.clone(), r#type, constraints);
-        self.columns.insert(key, column);
-        Ok(())
+        let column = Column::new(key, r#type, constraints);
+        self.columns.push(column);
+        Ok(self.columns.last().unwrap())
     }
 
-    pub fn add_record(
-        &mut self,
-        key: String,
-        values: HashMap<&Column, CellValue>,
-    ) -> Result<Record> {
-        if self.records.contains_key(&key) {
-            return Err(Error::RecordAlreadyExists {
-                key,
-                table_key: self.key.clone(),
-            });
-        }
+    pub fn add_record(&mut self, values: HashMap<String, CellValue>) -> Result<&Record> {
         let mut record = Record::new();
         for value in values {
-            record.insert(value.0.key.clone(), value.1);
+            let Some(column) = self.columns.iter().find(|c| c.key == value.0) else {
+                return Err(Error::BadColumnKey {
+                    key: value.0,
+                    table_key: self.key.clone(),
+                });
+            };
+
+            if std::mem::discriminant(&value.1) != std::mem::discriminant(&column.r#type) {
+                return Err(Error::Placeholder {
+                    text: "Type mismatch".to_string(),
+                });
+            }
+
+            // TODO: Check constraints
         }
-        Ok(record)
-    }
-
-    pub fn get_record(&self, key: &String) -> Result<&Record> {
-        self.records.get(key).ok_or(Error::BadRecordKey {
-            key: key.clone(),
-            table_key: self.key.clone(),
-        })
-    }
-
-    pub fn get_record_mut(&mut self, key: &String) -> Result<&mut Record> {
-        self.records.get_mut(key).ok_or(Error::BadRecordKey {
-            key: key.clone(),
-            table_key: self.key.clone(),
-        })
+        println!("Added record {:?}", record);
+        self.records.push(record);
+        Ok(self.records.last().unwrap())
     }
 }

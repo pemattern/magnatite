@@ -1,38 +1,63 @@
-use super::{column::Column, table::Table};
+use super::{column::Column, request::DatabaseRequest, table::Table};
 use crate::error::{Error, Result};
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Database {
-    tables: HashMap<String, Table>,
+    tables: Vec<Table>,
 }
 
 impl Database {
     pub fn new() -> Self {
-        Self {
-            tables: HashMap::new(),
-        }
+        Self { tables: Vec::new() }
     }
 
-    pub fn add_table(&mut self, key: String, columns: HashMap<String, Column>) -> Result<()> {
-        if self.tables.contains_key(&key) {
-            return Err(Error::TableAlreadyExists { key });
+    pub fn process_requests(&mut self, requests: Vec<DatabaseRequest>) -> Result<()> {
+        for request in requests {
+            match request {
+                DatabaseRequest::CreateTable { key, columns } => {
+                    let _ = match self.add_table(key, columns) {
+                        Ok(_) => {} // TODO: replace with success infos
+                        Err(error) => return Err(error),
+                    };
+                }
+                DatabaseRequest::InsertInto { key, data } => {
+                    let table = match self.get_table_mut(&key) {
+                        Ok(table) => table,
+                        Err(error) => return Err(error),
+                    };
+                    let _ = match table.add_record(data) {
+                        Ok(_) => {}
+                        Err(error) => return Err(error),
+                    };
+                }
+            }
         }
 
-        let table = Table::new(key.clone(), columns);
-        self.tables.insert(key, table);
         Ok(())
     }
 
-    pub fn get_table(&self, key: &String) -> Result<&Table> {
+    fn add_table(&mut self, key: String, columns: Option<Vec<Column>>) -> Result<&Table> {
+        if self.tables.iter().any(|t| t.key == key) {
+            return Err(Error::TableAlreadyExists { key: key.clone() });
+        }
+
+        let table = Table::new(key, columns);
+        self.tables.push(table);
+        self.tables.last().ok_or(Error::NotImplemented)
+    }
+
+    fn get_table(&self, key: &String) -> Result<&Table> {
         self.tables
-            .get(key)
+            .iter()
+            .find(|t| t.key == *key)
             .ok_or(Error::BadTableKey { key: key.clone() })
     }
 
-    pub fn get_table_mut(&mut self, key: &String) -> Result<&mut Table> {
+    fn get_table_mut(&mut self, key: &String) -> Result<&mut Table> {
         self.tables
-            .get_mut(key)
+            .iter_mut()
+            .find(|t| t.key == *key)
             .ok_or(Error::BadTableKey { key: key.clone() })
     }
 }

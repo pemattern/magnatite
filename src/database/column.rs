@@ -1,25 +1,20 @@
-#[derive(Debug, Clone)]
+use super::cell::CellValue;
+
+#[derive(Debug)]
 pub struct Column {
     pub key: String,
-    pub r#type: ColumnType,
+    pub r#type: CellValue,
     pub constraints: ColumnConstraint,
 }
 
 impl Column {
-    pub fn new(key: String, r#type: ColumnType, constraints: ColumnConstraint) -> Self {
+    pub fn new(key: String, r#type: CellValue, constraints: ColumnConstraint) -> Self {
         Self {
             key,
             r#type,
             constraints,
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum ColumnType {
-    String,
-    Integer,
-    Float,
 }
 
 bitflags::bitflags! {
