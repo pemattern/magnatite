@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use sqlparser::{
-    ast::{ColumnDef, DataType, Expr, Ident, ObjectName, Query, Statement, UnaryOperator, Value},
+    ast::{
+        ColumnDef, DataType, Expr, Ident, ObjectName, Query, SelectItem, SetExpr, Statement,
+        TableFactor, UnaryOperator, Value,
+    },
     dialect::PostgreSqlDialect,
     parser::Parser,
 };
@@ -22,10 +25,13 @@ pub fn parse_sql_query(query: String) -> Result<Vec<DatabaseRequest>> {
         Ok(statements) => statements,
         Err(error) => return Err(Error::BadSql { error }),
     };
+
+    println!("{:?}", statements);
+
     let mut db_requests = Vec::new();
     for statement in statements {
         let db_request = match interpret_sql_statement(statement) {
-            Ok(create_table_request) => create_table_request,
+            Ok(db_request) => db_request,
             Err(error) => return Err(error),
         };
         db_requests.push(db_request);
@@ -44,6 +50,7 @@ fn interpret_sql_statement(statement: Statement) -> Result<DatabaseRequest> {
             source,
             ..
         } => return interpret_insert_statement(table_name, columns, source),
+        Statement::Query(query) => return interpret_query_statement(query),
         _ => Err(Error::NotImplemented),
     }
 }
@@ -161,4 +168,29 @@ fn interpret_insert_statement(
         key: table_key,
         data: column_values,
     })
+}
+
+fn interpret_query_statement(query: Box<Query>) -> Result<DatabaseRequest> {
+    match *query.body {
+        SetExpr::Select(select) => {
+            let table = match select.from.first() {
+                Some(table) => table,
+                None => return Err(Error::NotImplemented),
+            };
+            let table_key = match &table.relation {
+                TableFactor::Table { name, .. } => match name.0.first() {
+                    Some(ident) => &ident.value,
+                    None => return Err(Error::NotImplemented),
+                },
+                _ => return Err(Error::NotImplemented),
+            };
+            let column_selection = match select.projection.first().unwrap() {
+                SelectItem::UnnamedExpr(identifier) => todo!(),
+                SelectItem::Wildcard(_) => todo!(),
+                _ => todo!(),
+            };
+        }
+        SetExpr::Update(_) => todo!(),
+        _ => return Err(Error::NotImplemented),
+    }
 }

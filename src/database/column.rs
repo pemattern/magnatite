@@ -61,3 +61,9 @@ bitflags::bitflags! {
         const PrimaryKey = 0b0000100;
     }
 }
+
+pub enum ColumnSelection {
+    All,
+    Some(Vec<String>),
+    None,
+}
