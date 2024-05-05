@@ -1,10 +1,10 @@
-use std::{cell::Cell, collections::HashMap};
+use std::collections::HashMap;
 
 use crate::error::{Error, Result};
 
 use super::{
     cell::CellValue,
-    column::{Column, ColumnConstraint},
+    column::{Column, ColumnConstraint, DataType},
     record::Record,
 };
 
@@ -28,7 +28,7 @@ impl Table {
     pub fn add_column(
         &mut self,
         key: String,
-        r#type: CellValue,
+        r#type: DataType,
         constraints: ColumnConstraint,
     ) -> Result<&Column> {
         if self.columns.iter().any(|c| c.key == key) {
@@ -56,7 +56,7 @@ impl Table {
     }
 
     pub fn add_record(&mut self, values: HashMap<String, CellValue>) -> Result<&Record> {
-        let mut record = Record::new();
+        let record = Record::new();
         for value in values {
             let Some(column) = self.columns.iter().find(|c| c.key == value.0) else {
                 return Err(Error::BadColumnKey {
@@ -65,9 +65,11 @@ impl Table {
                 });
             };
 
-            if std::mem::discriminant(&value.1) != std::mem::discriminant(&column.r#type) {
-                return Err(Error::Placeholder {
-                    text: "Type mismatch".to_string(),
+            if !column.accepts_value(&value.1) {
+                return Err(Error::DataTypeMismatch {
+                    column_key: column.key.clone(),
+                    expected: column.r#type.to_string(),
+                    received: value.1.to_string(),
                 });
             }
 

@@ -1,6 +1,5 @@
 use super::{column::Column, request::DatabaseRequest, table::Table};
 use crate::error::{Error, Result};
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Database {

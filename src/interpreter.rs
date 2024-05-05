@@ -68,9 +68,9 @@ fn interpret_create_table_statement(
     for column_def in column_defs {
         let key = column_def.name.value;
         let r#type = match column_def.data_type {
-            DataType::Text => CellValue::String("".to_string()),
-            DataType::Int(_) => CellValue::Integer(0),
-            DataType::Float(_) => CellValue::Float(0.),
+            DataType::Text => crate::database::column::DataType::String,
+            DataType::Int(_) => crate::database::column::DataType::Integer,
+            DataType::Float(_) => crate::database::column::DataType::Float,
             _ => return Err(Error::NotImplemented),
         };
         let constraints = ColumnConstraint::empty();

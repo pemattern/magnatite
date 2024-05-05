@@ -5,16 +5,44 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
-    BadSql { error: ParserError },
-    BadTableKey { key: String },
-    BadRecordKey { key: String, table_key: String },
-    BadColumnKey { key: String, table_key: String },
-    TableAlreadyExists { key: String },
-    RecordAlreadyExists { key: String, table_key: String },
-    ColumnAlreadyExists { key: String, table_key: String },
-    PrimaryColumnAlreadyExists { key: String, table_key: String },
+    BadSql {
+        error: ParserError,
+    },
+    BadTableKey {
+        key: String,
+    },
+    BadRecordKey {
+        key: String,
+        table_key: String,
+    },
+    BadColumnKey {
+        key: String,
+        table_key: String,
+    },
+    DataTypeMismatch {
+        column_key: String,
+        expected: String,
+        received: String,
+    },
+    TableAlreadyExists {
+        key: String,
+    },
+    RecordAlreadyExists {
+        key: String,
+        table_key: String,
+    },
+    ColumnAlreadyExists {
+        key: String,
+        table_key: String,
+    },
+    PrimaryColumnAlreadyExists {
+        key: String,
+        table_key: String,
+    },
     NotImplemented,
-    Placeholder { text: String },
+    Placeholder {
+        text: String,
+    },
 }
 
 impl Display for Error {
@@ -31,6 +59,15 @@ impl Display for Error {
                 f,
                 "column with key `{}` not found in table `{}`",
                 key, table_key
+            ),
+            Error::DataTypeMismatch {
+                column_key,
+                expected,
+                received,
+            } => write!(
+                f,
+                "column `{}` with type `{}` cannot accept values of type `{}`",
+                column_key, expected, received,
             ),
             Error::NotImplemented => write!(f, "feature not implemented"),
             Error::TableAlreadyExists { key } => {
